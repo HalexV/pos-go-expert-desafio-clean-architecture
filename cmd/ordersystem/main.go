@@ -8,7 +8,7 @@ import (
 
 	graphql_handler "github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
-	"github.com/devfullcycle/20-CleanArch/configs"
+	cfgs "github.com/devfullcycle/20-CleanArch/configs"
 	"github.com/devfullcycle/20-CleanArch/internal/event/handler"
 	"github.com/devfullcycle/20-CleanArch/internal/infra/graph"
 	"github.com/devfullcycle/20-CleanArch/internal/infra/grpc/pb"
@@ -24,7 +24,7 @@ import (
 )
 
 func main() {
-	configs, err := configs.LoadConfig(".")
+	configs, err := cfgs.LoadConfig(".")
 	if err != nil {
 		panic(err)
 	}
@@ -34,6 +34,14 @@ func main() {
 		panic(err)
 	}
 	defer db.Close()
+
+	err = cfgs.MakeMigrations(
+		"../../internal/infra/database/sql/migrations",
+		db,
+	)
+	if err != nil {
+		panic(err)
+	}
 
 	rabbitMQChannel := getRabbitMQChannel()
 

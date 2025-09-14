@@ -1,6 +1,14 @@
 package configs
 
-import "github.com/spf13/viper"
+import (
+	"database/sql"
+	"fmt"
+
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/mysql"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/spf13/viper"
+)
 
 type conf struct {
 	DBDriver          string `mapstructure:"DB_DRIVER"`
@@ -30,4 +38,37 @@ func LoadConfig(path string) (*conf, error) {
 		panic(err)
 	}
 	return cfg, err
+}
+
+func MakeMigrations(path string, db *sql.DB) error {
+	fmt.Println("Making migrations...")
+
+	driver, err := mysql.WithInstance(db, &mysql.Config{})
+	if err != nil {
+		return err
+	}
+
+	m, err := migrate.NewWithDatabaseInstance(
+		// Duas barras path relativo
+		// Três barras path absoluto
+		fmt.Sprintf("file://%s", path),
+		"mysql",
+		driver,
+	)
+	if err != nil {
+		return err
+	}
+
+	if err := m.Up(); err != nil {
+		switch err.Error() {
+		case "no change":
+			fmt.Println("No migrations changes.")
+			return nil
+		default:
+			return err
+		}
+	}
+
+	fmt.Println("Migrations finished.")
+	return nil
 }
