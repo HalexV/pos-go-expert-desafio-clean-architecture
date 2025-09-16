@@ -23,7 +23,14 @@ func (suite *OrderRepositoryTestSuite) SetupSuite() {
 	suite.Db = db
 }
 
-func (suite *OrderRepositoryTestSuite) TearDownTest() {
+func (suite *OrderRepositoryTestSuite) SetupTest() {
+	_, err := suite.Db.Exec("DELETE FROM orders")
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (suite *OrderRepositoryTestSuite) TearDownSuite() {
 	suite.Db.Close()
 }
 
@@ -48,4 +55,47 @@ func (suite *OrderRepositoryTestSuite) TestGivenAnOrder_WhenSave_ThenShouldSaveO
 	suite.Equal(order.Price, orderResult.Price)
 	suite.Equal(order.Tax, orderResult.Tax)
 	suite.Equal(order.FinalPrice, orderResult.FinalPrice)
+}
+
+func (suite *OrderRepositoryTestSuite) TestFindAllOrders() {
+	orderA, err := entity.NewOrder("1", 10.0, 1.0)
+	suite.NoError(err)
+	suite.NoError(orderA.CalculateFinalPrice())
+
+	orderB, err := entity.NewOrder("2", 15.0, 2.0)
+	suite.NoError(err)
+	suite.NoError(orderB.CalculateFinalPrice())
+
+	orderC, err := entity.NewOrder("3", 20.0, 3.0)
+	suite.NoError(err)
+	suite.NoError(orderC.CalculateFinalPrice())
+
+	repo := NewOrderRepository(suite.Db)
+
+	for _, o := range [3]entity.Order{
+		*orderA,
+		*orderB,
+		*orderC,
+	} {
+		err = repo.Save(&o)
+		suite.NoError(err)
+	}
+
+	ordersResult, err := repo.FindAll()
+	suite.NoError(err)
+
+	suite.Equal(orderA.ID, ordersResult[0].ID)
+	suite.Equal(orderA.Price, ordersResult[0].Price)
+	suite.Equal(orderA.Tax, ordersResult[0].Tax)
+	suite.Equal(orderA.FinalPrice, ordersResult[0].FinalPrice)
+
+	suite.Equal(orderB.ID, ordersResult[1].ID)
+	suite.Equal(orderB.Price, ordersResult[1].Price)
+	suite.Equal(orderB.Tax, ordersResult[1].Tax)
+	suite.Equal(orderB.FinalPrice, ordersResult[1].FinalPrice)
+
+	suite.Equal(orderC.ID, ordersResult[2].ID)
+	suite.Equal(orderC.Price, ordersResult[2].Price)
+	suite.Equal(orderC.Tax, ordersResult[2].Tax)
+	suite.Equal(orderC.FinalPrice, ordersResult[2].FinalPrice)
 }
